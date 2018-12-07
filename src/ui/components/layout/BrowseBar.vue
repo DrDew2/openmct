@@ -5,9 +5,10 @@
             <div class="l-browse-bar__object-name--w"
                  :class="type.cssClass">
                 <span
-                    class="l-browse-bar__object-name c-input-inline"
-                    v-on:blur="updateName"
-                    contenteditable>
+                    class="l-browse-bar__object-name"
+                    :class="{'c-input-inline': !preview}"
+                    v-on:blur="!preview && updateName($event)"
+                    :contenteditable="!preview">
                     {{ domainObject.name }}
                 </span>
             </div>
@@ -40,9 +41,9 @@
             <!-- Action buttons -->
             <div class="l-browse-bar__actions">
                 <button class="l-browse-bar__actions__edit c-button icon-notebook" title="New Notebook entry"></button>
-                <button class="l-browse-bar__actions__notebook-entry c-button c-button--major icon-pencil" title="Edit" v-if="!isEditing" @click="edit()"></button>
-                <button class="l-browse-bar__actions c-button c-button--major icon-save" title="Save and Finish Editing" v-if="isEditing" @click="saveAndFinishEditing()"></button>
-                <button class="l-browse-bar__actions c-button icon-x" title="Cancel Editing" v-if="isEditing" @click="cancelEditing()"></button>
+                <button class="l-browse-bar__actions__notebook-entry c-button c-button--major icon-pencil" title="Edit" v-if="!isEditing && !preview" @click="edit()"></button>
+                <button class="l-browse-bar__actions c-button c-button--major icon-save" title="Save and Finish Editing" v-if="isEditing  && !preview" @click="saveAndFinishEditing()"></button>
+                <button class="l-browse-bar__actions c-button icon-x" title="Cancel Editing" v-if="isEditing && !preview" @click="cancelEditing()"></button>
             </div>
         </div>
     </div>
@@ -51,6 +52,12 @@
 <script>
     export default {
         inject: ['openmct'],
+        props: {
+            preview: {
+                type: Boolean,
+                default: false
+            }
+        },
         methods: {
             toggleViewMenu: function (event) {
                 event.stopPropagation();
@@ -64,9 +71,12 @@
             },
             setView: function (view) {
                 this.viewKey = view.key;
-                this.openmct.router.updateParams({
-                    view: this.viewKey
-                });
+
+                if (!this.preview){
+                    this.openmct.router.updateParams({
+                        view: this.viewKey
+                    });
+                }
             },
             edit() {
                 this.openmct.editor.edit();
@@ -85,7 +95,13 @@
             showContextMenu(event) {
                 event.preventDefault();
                 event.stopPropagation();
-                this.openmct.contextMenu._showContextMenuForObjectPath(this.openmct.router.path, event.clientX, event.clientY);
+
+                this.openmct.contextMenu._showContextMenuForObjectPath([this.domainObject], {
+                    x: event.clientX,
+                    y: event.clientY,
+                    cssClass: this.preview ? 'c-menu--preview' : undefined,
+                    blacklist: this.preview ? ['preview'] : undefined
+                });
             }
         },
         data: function () {
@@ -137,6 +153,10 @@
 
 <style lang="scss">
     @import "~styles/sass-base";
+
+    .c-menu.c-menu--preview {
+        z-index: 110;
+    }
 
     .l-browse-bar {
         display: flex;

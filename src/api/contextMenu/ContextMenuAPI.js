@@ -51,6 +51,8 @@ class ContextMenuAPI {
      *           view (to add icons, for instance)
      */
     /**
+     * Optional method that determines whether an action is applicable for the given object. If not provided, will be
+     * applicable to all objects.
      * @method appliesTo
      * @memberof module:openmct.ContextMenuAction#
      * @param {DomainObject[]} objectPath the path of the object that the context menu has been invoked on.
@@ -72,9 +74,18 @@ class ContextMenuAPI {
     /**
      * @private
      */
-    _showContextMenuForObjectPath(objectPath, x, y) {
-        let applicableActions = this._allActions.filter(
-            (action) => action.appliesTo(objectPath));
+    _showContextMenuForObjectPath(objectPath, options) {
+        let applicableActions = this._allActions.filter((action) => {
+            return appliesToPath(action) && !blacklisted(action)
+        });
+
+        function appliesToPath(action) {
+            return action.appliesTo === undefined || action.appliesTo(objectPath);
+        }
+
+        function blacklisted(action) {
+            return false//return options.blacklist.includes(())
+        }
 
         if (this._activeContextMenu) {
             this._hideActiveContextMenu();
@@ -84,7 +95,10 @@ class ContextMenuAPI {
         this._activeContextMenu.$mount();
         document.body.appendChild(this._activeContextMenu.$el);
 
-        let position = this._calculatePopupPosition(x, y, this._activeContextMenu.$el);
+        let position = this._calculatePopupPosition(options.x, options.y, this._activeContextMenu.$el);
+        if (options.cssClass !== undefined) {
+            this._activeContextMenu.$el.classList.add(options.cssClass);
+        }
         this._activeContextMenu.$el.style.left = `${position.x}px`;
         this._activeContextMenu.$el.style.top = `${position.y}px`;
 
